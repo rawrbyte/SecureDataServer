@@ -65,7 +65,7 @@ class Principal:
                 self.lockDate = datetime.now()
             else:
                 lockTime = (datetime.now() - self.lockDate).total_seconds()
-                if lockTime > 600:
+                if lockTime > 5:
                     self.lockStatus = False
                     self.loginAttempt = 0
                     return False
@@ -84,12 +84,12 @@ class Principal:
 
 def verifyPass(principal, password):
     # Handles <prog>
-    if pbkdf2_sha256.verify(password, principal.getPassword()) and principal.getLockStatus() is False:
-        principal.resetLoginAttempt()
-        print("Correct Password")
+    if principal.checkLockStatus():
+        print("Too many wrong attempts. Please try again after 10 minutes")
     else:
-        if principal.checkLockStatus():
-            print("Too many wrong attempts. Please try again after 10 minutes")
+        if pbkdf2_sha256.verify(password, principal.getPassword()) and principal.getLockStatus() is False:
+            principal.resetLoginAttempt()
+            print("Correct Password!")
         else: 
             principal.incrementLoginAttempt()
             print("Wrong password!")
@@ -129,8 +129,8 @@ def main():
     verifyPass(pOne, "WRONG_PASS")
     verifyPass(pOne, "WRONG_PASS")
     verifyPass(pOne, "WRONG_PASS")
-    verifyPass(pOne, "WRONG_PASS")
-
+    time.sleep(10)
+    verifyPass(pOne, "1")
 
 
 if __name__ == "__main__":
