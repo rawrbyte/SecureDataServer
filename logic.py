@@ -63,11 +63,13 @@ class Principal:
             if self.lockDate is None:
                 self.lockStatus = True
                 self.lockDate = datetime.now()
+                return True
             else:
                 lockTime = (datetime.now() - self.lockDate).total_seconds()
                 if lockTime > 5:
                     self.lockStatus = False
                     self.loginAttempt = 0
+                    self.lockDate = none
                     return False
                 else:
                     return True
