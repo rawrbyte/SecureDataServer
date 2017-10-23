@@ -69,7 +69,7 @@ class Principal:
                 if lockTime > 5:
                     self.lockStatus = False
                     self.loginAttempt = 0
-                    self.lockDate = none
+                    self.lockDate = None
                     return False
                 else:
                     return True
