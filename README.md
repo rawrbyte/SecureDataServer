@@ -2,6 +2,7 @@
 
 # Libraries used:
 - Lark
+- NLTK (pip install nltk)
 
 logic.py
 --------
