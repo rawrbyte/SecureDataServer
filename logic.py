@@ -1,5 +1,7 @@
 # https://pypi.python.org/pypi/simple-rbac
 import rbac.acl
+import time
+from datetime import datetime
 from passlib.hash import pbkdf2_sha256
 
 # RIGHTS CONSTANTS
@@ -18,6 +20,9 @@ class Principal:
         self.setPassword(password)
         self.dataDict = {}
         self.r.add_role(name)
+        self.loginAttempt = 0
+        self.lockStatus = False
+        self.lockDate = None
 
     def setName(self, name):
         self._name = name
@@ -32,12 +37,42 @@ class Principal:
     def getPassword(self):
         return self._password
 
+    def resetLoginAttempt(self):
+        self.loginAttempt = 0
+
+    def incrementLoginAttempt(self):
+        self.loginAttempt += 1
+
+    def getLoginAttempt(self):
+        return self.loginAttempt
+
+    def getLockStatus(self):
+        return self.lockStatus
+
     def setData(self, var, d):
         self.dataDict.update({var : d})
         self.r.add_resource(var)
 
     def getData(self, var):
         return self.dataDict.get(var)
+
+    def checkLockStatus(self):
+        if self.loginAttempt < 4:
+            return False
+        else:
+            if self.lockDate is None:
+                self.lockStatus = True
+                self.lockDate = datetime.now()
+                return True
+            else:
+                lockTime = (datetime.now() - self.lockDate).total_seconds()
+                if lockTime > 5:
+                    self.lockStatus = False
+                    self.loginAttempt = 0
+                    self.lockDate = None
+                    return False
+                else:
+                    return True
 
     def setRights(self, principal, action, resource):
         # Set Delegation
@@ -51,10 +86,15 @@ class Principal:
 
 def verifyPass(principal, password):
     # Handles <prog>
-    if pbkdf2_sha256.verify(password, principal.getPassword()):
-        print("Correct Password")
+    if principal.checkLockStatus():
+        print("Too many wrong attempts. Please try again after 10 minutes")
     else:
-        print("Wrong password!")
+        if pbkdf2_sha256.verify(password, principal.getPassword()) and principal.getLockStatus() is False:
+            principal.resetLoginAttempt()
+            print("Correct Password!")
+        else: 
+            principal.incrementLoginAttempt()
+            print("Wrong password!")
 
 def main():
     print("Creating principals: pOne, pTwo, pThree. Printing names and hashed passwords.")
@@ -86,6 +126,14 @@ def main():
     print("\nVerify passwords of pOne")
     verifyPass(pOne, "1")
     verifyPass(pOne, "WRONG_PASS")
+    verifyPass(pOne, "WRONG_PASS")
+    verifyPass(pOne, "WRONG_PASS")
+    verifyPass(pOne, "WRONG_PASS")
+    verifyPass(pOne, "WRONG_PASS")
+    verifyPass(pOne, "WRONG_PASS")
+    time.sleep(10)
+    verifyPass(pOne, "1")
+
 
 if __name__ == "__main__":
     main()
