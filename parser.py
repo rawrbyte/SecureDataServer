@@ -45,4 +45,11 @@ grammar = Lark(r"""
 	
 	""", start='prog')
 
-print(grammar.parse('as principal bob password "B0BPWxxd" do \n set z = "bobs string" \n set x = "another string" \n return x \n').pretty())
+# print(grammar.parse('as principal bob password "B0BPWxxd" do \n set z = "bobs string" \n set x = "another string" \n return x \n').pretty())
+
+print(grammar.parse('as principal admin password "admin" do \n create principal bob "B0BPWxxd" \n set x = "my string" \n set y ={f1=x,f2="field2"} \n set delegation x admin read -> bob \n return y . f1 \n ***'))
+
+# from lark import Transformer
+
+# class MyTransformer(Transformer):
+# 	def 

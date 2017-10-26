@@ -2,7 +2,8 @@
 
 # Libraries used:
 - Lark
-- NLTK (pip install nltk)
+Install Lark:
+pip install lark-parser
 
 logic.py
 --------
