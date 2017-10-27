@@ -7,7 +7,7 @@ from logic import isAdmin
 from logic import adminPass
 
 def main():
-    '''
+
     print("Create Admin account")
     print("Add account to accounts set. Set isAdmin to True")
     print("-----")
@@ -115,19 +115,22 @@ def main():
     admin.cmd_return("records")
     pOne.cmd_exit()
     admin.cmd_exit()
+
+
     '''
+    admin = Principal("admin", adminPass)
+    #random = Principal("random", "123")
 
     # Here is a slightly more complicated version of the first example program:
-    admin = Principal("admin", adminPass)
     bob = Principal("bob", "B0BPWxxd")
     admin.setData("x", "my string")
     admin.setData("y", {"f1":admin.getData("x"), "f2":"field2"})
     admin.setRights("bob", "read", "x")
+    bob.getData("x")
     admin.cmd_return("y.f1")
 
     # Let’s jump right in with an example of the kinds of programs your data server will execute:
     print("\n")
-    admin = Principal("admin", adminPass)
     alice = Principal("alice", "alices_password")
     admin.setData("msg", "Hi Alice. Good luck in Build-it, Break-it, Fix-it!")
     admin.setRights("alice", "read", "msg")
@@ -141,8 +144,41 @@ def main():
     admin.local("names", "records")
     admin.forEach("rec", "names", "rec.name")
     admin.cmd_return("names")
+    '''
 
+    '''
+    print("Create admin, alice, bob, and carl")
+    admin = Principal("admin", adminPass)
+    alice = Principal("alice", "123")
+    bob = Principal("bob", "123")
+    carl = Principal("carl", "123")
 
+    print("\nAdmin writes to variable x")
+    admin.setData("x", "Alice can Read, Bob can Write")
+
+    print("\nAlice can now read x")
+    admin.setRights("alice", "read", "x")
+    print("\nBob can now write to x")
+    admin.setRights("bob", "write", "x")
+
+    print("\nAlice writing to x | FAILED")
+    alice.setData("x", "Alice attempting to write x")
+    print("\nBob reading to x | FAILED")
+    bob.getData("x")
+
+    print("\nAlice reading x | NO OUTPUT = SUCCESS")
+    alice.getData("x")
+    print("\nBob writing to x | SET")
+    bob.setData("x", "Bob writing to x")
+
+    print("\nGive Carl Append rights")
+    admin.setRights("carl", "append", "x")
+
+    print("\nCarl Appends")
+    carl.append("x", "CONCATENATE")
+    print("\nAlice attempts tp Append | DENIED")
+    alice.append("x", "************")
+    '''
 
 if __name__ == "__main__":
     main()
