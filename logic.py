@@ -1,14 +1,8 @@
-# https://pypi.python.org/pypi/simple-rbac
 import rbac.acl
+import rbac.context
 from passlib.hash import pbkdf2_sha256
 
-# RIGHTS CONSTANTS
-READ     = "read"
-WRITE    = "write"
-APPEND   = "append"
-DELEGATE = "delegate"
-
-# Admin?
+# Admin
 isAdmin = False
 adminPass = "pass" # ./server [PASSWORD]
 
@@ -26,20 +20,26 @@ class Variable:
 
 class Principal:
     # Handles all <prim_cmd>
+    #r = rbac.acl.Registry()
     r = rbac.acl.Registry()
+    context = rbac.context.IdentityContext(r)
 
     def __init__(self, name, password):
         # Create Principal
         # as principal p password s do
         if name in accounts:
-            print("{\"status\":\"DENIED\"}")
+            res = {"status": "DENIED"}
+            print(res)
             return
         self.setName(name)
-        self.setPassword(password)
+        hash = pbkdf2_sha256.hash(password)
+        self._password = hash
         self.dataDict = {}
         self.localVars = {}
-        self.r.add_role(name)
-        print("{\"status\":\"CREATE_PRINCIPAL\"}")
+        tmprole = self.r.add_role(name)
+        self.context.set_roles_loader(tmprole)
+        res = {"status": "CREATE_PRINCIPAL"}
+        print(res)
 
     def setName(self, name):
         self._name = name
@@ -50,7 +50,8 @@ class Principal:
     def setPassword(self, password):
         hash = pbkdf2_sha256.hash(password)
         self._password = hash
-        print("{\"status\":\"CHANGE_PASSWORD\"}")
+        res = {"status": "CHANGE_PASSWORD"}
+        print(res)
 
     def getPassword(self):
         return self._password
@@ -60,7 +61,8 @@ class Principal:
         tmp = Variable(d)
         self.dataDict.update({var : tmp})
         self.r.add_resource(var)
-        print("{\"status\":\"SET\"}")
+        res = {"status": "SET"}
+        print(res)
 
     def getData(self, var):
         if var in self.dataDict:
@@ -69,21 +71,34 @@ class Principal:
             return self.localVars.get(var).varValue
 
     def setRights(self, principal, action, resource):
-        # Set Delegation
-        self.r.allow(principal, action, resource)
-        print("{\"status\":\"SET_DELEGATION\"}")
+        if principal == "all":
+            for name in accounts:
+                self.r.allow(name, action, resource)
+        else:
+            self.r.allow(principal, action, resource)
+        res = {"status": "SET_DELEGATION"}
+        print(res)
 
-    def deleteRights(self):
-        print("{\"status\":\"DELETE_DELEGATION\"}")
+    def deleteRights(self, principal, action, resource):
+        if principal == "all":
+            for name in accounts:
+                self.r.deny(name, action, resource)
+        else:
+            self.r.deny(principal, action, resource)
+        res = {"status": "DELETE_DELEGATION"}
+        print(res)
 
     def defaultRights(self):
-        print("{\"status\":\"DEFAULT_DELEGATOR\"}")
+        res = {"status": "DEFAULT_DELEGATOR"}
+        print(res)
 
     def checkPermission(self, principal, action, resource):
         if self.r.is_allowed(principal, action, resource):
-            print("{\"status\":\"SUCCESS\"}")
+            res = {"status":"SUCCESS"}
+            print(res)
         else:
-            print("{\"status\":\"DENIED\"}")
+            res = {"status":"DENIED"}
+            print(res)
 
     def append(self, var, d):
         if type(d) is str:
@@ -96,7 +111,8 @@ class Principal:
             tmp = Variable(t)
             self.dataDict.update({var:tmp})
             self.r.add_resource(var)
-        print("{\"status\":\"APPEND\"}")
+        res = {"status":"APPEND"}
+        print(res)
 
     def local(self, var, d):
         if d in self.dataDict:
@@ -108,30 +124,60 @@ class Principal:
             tmp = Variable(d)
             self.localVars.update({var : tmp})
             self.r.add_resource(var)
-        print("{\"status\":\"LOCAL\"}")
+        res = {"status":"LOCAL"}
+        print(res)
 
-    def forEach(self, y, x, expr):
+    def forEach(self, iterator, sequence, expression):
+        seq = self.getData(sequence)
+        expr = expression.split(".")
+        if expr[0] == iterator:
+            for i,s in enumerate(seq):
+                seq[i] = s.get(expr[1])
+        if sequence in self.dataDict:
+            tmp = Variable(seq)
+            self.dataDict.update({sequence: tmp})
+            self.r.add_resource(sequence)
+        else:
+            tmp = Variable(seq)
+            self.localVars.update({sequence: tmp})
+            self.r.add_resource(sequence)
+        res = {"status":"FOREACH"}
+        print(res)
 
-        print("{\"status\":\"FOREACH\"}")
-
-    def output(self):
-        print("{\"status\":\"RETURNING\"}")
+    def cmd_return(self, expr):
+        val = self.getData(expr)
+        res = {"status":"RETURNING", "output":val}
+        print(res)
 
     def terminate(self):
         self.localVars = {}
 
+    def cmd_exit(self):
+        if self._name == 'admin':
+            res = {"status":"EXITING"}
+            print(res)
+            exit(0)
+            # Terminate the client connection
+            # Halts with return code 0
+        else:
+            res = {"status": "DENIED"}
+            print(res)
+
 def verifyPass(principal, password):
     # Handles <prog>
     if pbkdf2_sha256.verify(password, principal.getPassword()):
-        print("{\"status\":\"SUCCESS\"}")
+        res = {"status":"SUCCESS"}
+        print(res)
     else:
-        print("{\"status\":\"DENIED\"}")
+        res = {"stats":"DENIED"}
+        print(res)
 
 def main():
     print("Create Admin account")
     print("Add account to accounts set. Set isAdmin to True")
     print("-----")
     admin = Principal("admin", adminPass)
+
     list = ['asdf', 'asfd']
     admin.setData("x", "hello")
 
@@ -156,6 +202,10 @@ def main():
 
     print("\nTest local")
     admin.local("names", "records")
+    print(admin.getData("names"))
+
+    print("\nFor Each Test")
+    admin.forEach("rec", "names", "rec.name")
     print(admin.getData("names"))
 
     print("\nSet Data Test")
@@ -208,15 +258,29 @@ def main():
 
     print("\nSet rights: pTwo is allowed to READ pOne's intro_msg, then verify with pTwo and pThree")
     print("-----")
-    pOne.setRights(pTwo.getName(), READ, "intro_msg")
-    pOne.checkPermission(pTwo.getName(), READ, "intro_msg")
-    pOne.checkPermission(pThree.getName(), READ, "intro_msg")
+    pOne.setRights(pTwo.getName(), "read", "intro_msg")
+    pOne.checkPermission(pTwo.getName(), "read", "intro_msg")
+    pOne.checkPermission(pThree.getName(), "read", "intro_msg")
+
+    print("\nSet Rights to 'all' now")
+    pOne.setRights("all", "read", "intro_msg")
+    pOne.checkPermission(pTwo.getName(), "read", "intro_msg")
+    pOne.checkPermission(pThree.getName(), "read", "intro_msg")
+    print("\nNow we remove pThree's rights to read")
+    pOne.deleteRights(pThree.getName(), "read", "intro_msg")
+    pOne.checkPermission(pThree.getName(), "read", "intro_msg")
+
 
     print("\nVerify passwords of pOne")
     print("-----")
     verifyPass(pOne, "1")
     verifyPass(pOne, "$pbkdf2-sha256$29000$B.AcY.w9p9T6PwfgXMuZkw$tNWzC3BcBkK92Wq0hKCaOcvIINZ4W1pkZ/fnMSzcXlM")
     verifyPass(pOne, "WRONG_PASS")
+
+    print("\nReturning and Exiting")
+    admin.cmd_return("records")
+    pOne.cmd_exit()
+    admin.cmd_exit()
 
 if __name__ == "__main__":
     main()
