@@ -7,6 +7,7 @@ from logic import isAdmin
 from logic import adminPass
 
 def main():
+    '''
     print("Create Admin account")
     print("Add account to accounts set. Set isAdmin to True")
     print("-----")
@@ -104,7 +105,6 @@ def main():
     pOne.deleteRights(pThree.getName(), "read", "intro_msg")
     pOne.checkPermission(pThree.getName(), "read", "intro_msg")
 
-
     print("\nVerify passwords of pOne")
     print("-----")
     verifyPass(pOne, "1")
@@ -115,6 +115,34 @@ def main():
     admin.cmd_return("records")
     pOne.cmd_exit()
     admin.cmd_exit()
+    '''
+
+    # Here is a slightly more complicated version of the first example program:
+    admin = Principal("admin", adminPass)
+    bob = Principal("bob", "B0BPWxxd")
+    admin.setData("x", "my string")
+    admin.setData("y", {"f1":admin.getData("x"), "f2":"field2"})
+    admin.setRights("bob", "read", "x")
+    admin.cmd_return("y.f1")
+
+    # Let’s jump right in with an example of the kinds of programs your data server will execute:
+    print("\n")
+    admin = Principal("admin", adminPass)
+    alice = Principal("alice", "alices_password")
+    admin.setData("msg", "Hi Alice. Good luck in Build-it, Break-it, Fix-it!")
+    admin.setRights("alice", "read", "msg")
+    admin.cmd_return("\"success\"")
+
+    # As an example, consider the following program:
+    print("\n")
+    admin.setData("records", [])
+    admin.append("records", {"name":"mike", "date":"1-1-90"})
+    admin.append("records", {"name":"dave", "date":"1-1-85"})
+    admin.local("names", "records")
+    admin.forEach("rec", "names", "rec.name")
+    admin.cmd_return("names")
+
+
 
 if __name__ == "__main__":
     main()
