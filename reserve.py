@@ -5,6 +5,3 @@ def isReserveKeyword(keyword):
         return True
     else:
         return False
-
-print(isReserveKeyword('append'))
-print(isReserveKeyword('asof'))
